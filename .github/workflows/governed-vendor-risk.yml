@@ -1,0 +1,49 @@
+name: governed-vendor-risk
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: vendor_risk_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d vendor_risk_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:test@127.0.0.1:5432/vendor_risk_test
+      GOVERNANCE_GATEWAY_SECRET: ci-governance-secret-at-least-thirty-two-characters
+      SESSION_SECRET: ci-session-secret-that-is-at-least-thirty-two-characters
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: node --test governance/governance.test.cjs
+      - run: node --check governance/kernel.cjs
+      - run: node --check governance/domain.cjs
+      - run: npm run typecheck
+        working-directory: frontend
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_vendor_contract_risk.sql
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_vendor_contract_risk.sql
+      - run: npm run build
+        working-directory: frontend
+      - run: bash governance/run-live-http.sh
+      - run: bash -n start.sh
+      - run: >-
+          ! grep -Eiq 'DROP (TABLE|DATABASE)|TRUNCATE|kill -9|npm install|seed|db push' start.sh migrations/001_vendor_contract_risk.sql

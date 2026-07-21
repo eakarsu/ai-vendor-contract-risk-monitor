@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { rolePermissions } from '@/lib/auth';
+import { rolePermissions } from '@/lib/authShared';
 import type { EntityRecord, FeatureEntitySet } from '@/lib/featureEntities';
 
 type Props = {

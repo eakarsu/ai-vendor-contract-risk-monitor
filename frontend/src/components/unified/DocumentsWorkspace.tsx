@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import type { DocumentRecord } from '@/lib/documentStore';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { rolePermissions } from '@/lib/auth';
+import { rolePermissions } from '@/lib/authShared';
 
 export default function DocumentsWorkspace() {
   const { user } = useAuth();

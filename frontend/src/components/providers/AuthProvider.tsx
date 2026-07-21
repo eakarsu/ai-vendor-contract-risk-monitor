@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import type { SessionUser } from '@/lib/auth';
+import type { SessionUser } from '@/lib/authShared';
 
 type AuthContextValue = {
   user: SessionUser | null;

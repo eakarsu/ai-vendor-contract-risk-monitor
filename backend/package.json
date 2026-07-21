@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "test": "node --test ../governance/governance.test.cjs",
     "typecheck": "cd ../frontend && npm run typecheck",
     "smoke": "cd ../frontend && npm run smoke",
     "dev": "cd ../frontend && npm run dev"

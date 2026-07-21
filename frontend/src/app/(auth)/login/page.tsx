@@ -3,13 +3,12 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { demoUser, demoUsers } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
   const { ready, user, login } = useAuth();
-  const [email, setEmail] = useState(demoUser.email);
-  const [password, setPassword] = useState(demoUser.password);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -26,7 +25,7 @@ export default function LoginPage() {
     const ok = await login(email, password);
     setSubmitting(false);
     if (!ok) {
-      setError('Use the seeded AI Agent Ops demo credentials.');
+      setError('Authentication failed.');
       return;
     }
     router.push('/dashboard');
@@ -57,14 +56,6 @@ export default function LoginPage() {
 
         {error ? <div style={{ color: '#b91c1c', marginTop: 14 }}>{error}</div> : null}
 
-        <div className="hint">
-          Seeded suite users:
-          {demoUsers.map((user) => (
-            <div key={user.email} style={{ marginTop: 8 }}>
-              <strong>{user.role}</strong>: {user.email} / {user.password}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

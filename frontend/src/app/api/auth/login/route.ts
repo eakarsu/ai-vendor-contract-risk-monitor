@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   response.cookies.set(AUTH_COOKIE, encodeSession(user), {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false,
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 60 * 60 * 8,
   });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTH_COOKIE, decodeSession } from '@/lib/auth';
+const AUTH_COOKIE = 'ai_vendor_contract_risk_monitor_session';
 
 const protectedPaths = [
   '/dashboard',
@@ -29,8 +29,8 @@ function isProtected(pathname: string) {
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const user = decodeSession(request.cookies.get(AUTH_COOKIE)?.value);
-  const hasSession = Boolean(user);
+  // Middleware performs navigation only; API routes verify the signed session.
+  const hasSession = Boolean(request.cookies.get(AUTH_COOKIE)?.value);
 
   if ((pathname === '/login' || pathname === '/') && hasSession) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
