@@ -49,6 +49,15 @@ export default function LoginPage() {
             Password
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </label>
+          <button
+            type="button"
+            onClick={() => { setEmail(process.env.NEXT_PUBLIC_DEMO_EMAIL || ''); setPassword(process.env.NEXT_PUBLIC_DEMO_PASSWORD || ''); }}
+            disabled={!process.env.NEXT_PUBLIC_DEMO_EMAIL || !process.env.NEXT_PUBLIC_DEMO_PASSWORD}
+            aria-label="Auto Fill Demo Credentials"
+            style={{ width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', cursor: 'pointer' }}
+          >
+            Auto Fill Demo Credentials
+          </button>
           <button className="button primary" type="submit" disabled={submitting}>
             {submitting ? 'Signing in...' : 'Sign in'}
           </button>
