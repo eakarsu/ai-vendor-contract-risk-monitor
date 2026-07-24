@@ -1,6 +1,8 @@
 export const AUTH_COOKIE = 'ai_vendor_contract_risk_monitor_session';
 
 export type SessionUser = {
+  identityId: string;
+  tenantId: string;
   email: string;
   firstName: string;
   lastName: string;
