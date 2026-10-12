@@ -29,12 +29,17 @@ export default function EntityWorkspace({ slug, seed }: Props) {
   const canManage = permissions.canManageDocuments;
   const seedSet = useMemo(() => (seed ? cloneSet(seed) : null), [seed]);
   const [dataset, setDataset] = useState<FeatureEntitySet | null>(seedSet);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [form, setForm] = useState(emptyRecordForm);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<EntityRecord | null>(null);
+  const [rowDraft, setRowDraft] = useState<EntityRecord | null>(null);
+  const [editingRow, setEditingRow] = useState(false);
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
+  const dirty = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -42,20 +47,31 @@ export default function EntityWorkspace({ slug, seed }: Props) {
       if (!seedSet) return;
       const response = await fetch(`/api/entities/${slug}`, { cache: 'no-store' });
       if (!response.ok) {
-        if (active) setDataset(seedSet);
+        if (active) {
+          setDataset(seedSet);
+          setLoaded(true);
+        }
         return;
       }
       const payload = (await response.json()) as FeatureEntitySet;
-      if (active) setDataset(payload);
+      if (active) {
+        setDataset(payload);
+        setLoaded(true);
+      }
     }
-    void load();
+    void load().catch(() => {
+      if (active) {
+        setDataset(seedSet);
+        setLoaded(true);
+      }
+    });
     return () => {
       active = false;
     };
   }, [seedSet, slug]);
 
   useEffect(() => {
-    if (!dataset) return;
+    if (!dataset || !loaded || !dirty.current) return;
     if (!canManage) {
       setSaving(false);
       return;
@@ -71,6 +87,7 @@ export default function EntityWorkspace({ slug, seed }: Props) {
       if (!response.ok) {
         setError('Unable to save changes for this role.');
       } else {
+        dirty.current = false;
         setError('');
       }
       setSaving(false);
@@ -78,7 +95,7 @@ export default function EntityWorkspace({ slug, seed }: Props) {
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
     };
-  }, [canManage, dataset, slug]);
+  }, [canManage, dataset, loaded, slug]);
 
   if (!dataset) return null;
 
@@ -89,20 +106,9 @@ export default function EntityWorkspace({ slug, seed }: Props) {
     (row.status ?? '').toLowerCase().includes(query.toLowerCase()),
   );
 
-  const updateRow = (id: string, field: keyof EntityRecord, value: string) => {
-    if (!canManage) return;
-    setDataset((current) =>
-      current
-        ? {
-            ...current,
-            rows: current.rows.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
-          }
-        : current,
-    );
-  };
-
   const removeRow = (id: string) => {
     if (!canManage) return;
+    dirty.current = true;
     setDataset((current) =>
       current
         ? {
@@ -113,9 +119,35 @@ export default function EntityWorkspace({ slug, seed }: Props) {
     );
   };
 
+  const openRow = (row: EntityRecord) => {
+    setSelectedRow(row);
+    setRowDraft({ ...row });
+    setEditingRow(false);
+  };
+
+  const saveRow = () => {
+    if (!canManage || !rowDraft) return;
+    dirty.current = true;
+    setDataset((current) => current ? {
+      ...current,
+      rows: current.rows.map((row) => row.id === rowDraft.id ? { ...rowDraft } : row),
+    } : current);
+    setSelectedRow({ ...rowDraft });
+    setEditingRow(false);
+  };
+
+  const deleteSelectedRow = () => {
+    if (!canManage || !selectedRow) return;
+    removeRow(selectedRow.id);
+    setSelectedRow(null);
+    setRowDraft(null);
+    setEditingRow(false);
+  };
+
   const addRow = () => {
     if (!canManage) return;
     if (!form.name.trim()) return;
+    dirty.current = true;
     const row: EntityRecord = {
       id: `entity-${Date.now()}`,
       name: form.name.trim(),
@@ -156,6 +188,8 @@ export default function EntityWorkspace({ slug, seed }: Props) {
           }
         : current,
     );
+    setSelectedRow((current) => current?.id === id ? payload.row : current);
+    setRowDraft((current) => current?.id === id ? { ...payload.row } : current);
     setError('');
   };
 
@@ -195,25 +229,24 @@ export default function EntityWorkspace({ slug, seed }: Props) {
           </thead>
           <tbody>
             {filtered.map((row) => (
-              <tr key={row.id}>
-                <td><input value={row.name} onChange={(e) => updateRow(row.id, 'name', e.target.value)} disabled={!canManage} /></td>
-                <td>
-                  <select value={row.status} onChange={(e) => updateRow(row.id, 'status', e.target.value)} disabled={!canManage}>
-                    {STATUS_OPTIONS.map((status) => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
-                </td>
-                <td><input value={row.owner} onChange={(e) => updateRow(row.id, 'owner', e.target.value)} disabled={!canManage} /></td>
-                <td><input value={row.amount ?? ''} onChange={(e) => updateRow(row.id, 'amount', e.target.value)} disabled={!canManage} /></td>
-                <td><input type="date" value={row.dueDate ?? ''} onChange={(e) => updateRow(row.id, 'dueDate', e.target.value)} disabled={!canManage} /></td>
-                <td>
-                  <div className="inline-links">
-                    <button className="button subtle" type="button" onClick={() => applyApproval(row.id, true)} disabled={!canApprove}>Approve</button>
-                    <button className="button subtle" type="button" onClick={() => applyApproval(row.id, false)} disabled={!canApprove}>Reject</button>
-                    <button className="button subtle" type="button" onClick={() => removeRow(row.id)} disabled={!canManage}>Remove</button>
-                  </div>
-                </td>
+              <tr
+                key={row.id}
+                className="clickable-data-row"
+                tabIndex={0}
+                onClick={() => openRow(row)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openRow(row);
+                  }
+                }}
+              >
+                <td><strong>{row.name}</strong></td>
+                <td><span className="status-chip">{row.status}</span></td>
+                <td>{row.owner}</td>
+                <td>{row.amount || '$0'}</td>
+                <td>{row.dueDate || 'Not set'}</td>
+                <td><button className="button subtle" type="button" onClick={(event) => { event.stopPropagation(); openRow(row); }}>Open</button></td>
               </tr>
             ))}
           </tbody>
@@ -262,6 +295,54 @@ export default function EntityWorkspace({ slug, seed }: Props) {
             <div className="record-modal-actions">
               <button className="button secondary" type="button" onClick={() => setShowAddModal(false)}>Cancel</button>
               <button className="button primary" type="button" onClick={addRow} disabled={!form.name.trim()}>Save record</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedRow && rowDraft ? (
+        <div className="record-modal-backdrop" role="presentation" onClick={() => setSelectedRow(null)}>
+          <div className="record-modal" role="dialog" aria-modal="true" aria-label={dataset.title + ' record details'} onClick={(event) => event.stopPropagation()}>
+            <button className="record-modal-close" type="button" aria-label="Close record dialog" onClick={() => setSelectedRow(null)}>
+              <X size={18} aria-hidden="true" />
+            </button>
+            <div className="record-modal-header">
+              <div>
+                <span className="eyebrow">{editingRow ? 'Edit Record' : 'Record Details'}</span>
+                <h2>{selectedRow.name}</h2>
+                <p>Stored in PostgreSQL and protected by role-based change permissions.</p>
+              </div>
+            </div>
+            <div className="record-form-grid">
+              <label className="record-form-field span-2">
+                <span>Name</span>
+                <input value={rowDraft.name} disabled={!editingRow} onChange={(event) => setRowDraft((current) => current ? { ...current, name: event.target.value } : current)} />
+              </label>
+              <label className="record-form-field">
+                <span>Status</span>
+                <select value={rowDraft.status} disabled={!editingRow} onChange={(event) => setRowDraft((current) => current ? { ...current, status: event.target.value } : current)}>
+                  {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </label>
+              <label className="record-form-field">
+                <span>Owner</span>
+                <input value={rowDraft.owner} disabled={!editingRow} onChange={(event) => setRowDraft((current) => current ? { ...current, owner: event.target.value } : current)} />
+              </label>
+              <label className="record-form-field">
+                <span>Amount</span>
+                <input value={rowDraft.amount || ''} disabled={!editingRow} onChange={(event) => setRowDraft((current) => current ? { ...current, amount: event.target.value } : current)} />
+              </label>
+              <label className="record-form-field">
+                <span>Due Date</span>
+                <input type="date" value={rowDraft.dueDate || ''} disabled={!editingRow} onChange={(event) => setRowDraft((current) => current ? { ...current, dueDate: event.target.value } : current)} />
+              </label>
+            </div>
+            <div className="record-modal-actions">
+              {canApprove ? <button className="button secondary" type="button" onClick={() => applyApproval(selectedRow.id, true)}>Approve</button> : null}
+              {canApprove ? <button className="button secondary" type="button" onClick={() => applyApproval(selectedRow.id, false)}>Reject</button> : null}
+              <button className="button primary" type="button" disabled={!canManage} onClick={() => editingRow ? saveRow() : setEditingRow(true)}>{editingRow ? 'Save changes' : 'Edit'}</button>
+              <button className="button danger" type="button" disabled={!canManage} onClick={deleteSelectedRow}>Delete</button>
+              <button className="button secondary" type="button" onClick={() => setSelectedRow(null)}>Cancel</button>
             </div>
           </div>
         </div>

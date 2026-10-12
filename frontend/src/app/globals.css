@@ -902,6 +902,133 @@ textarea {
   }
 }
 
+.ai-report-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.ai-report-table {
+  border-collapse: collapse;
+  min-width: 100%;
+  width: max-content;
+}
+
+.ai-report-table th,
+.ai-report-table td {
+  border-bottom: 1px solid var(--border);
+  max-width: 320px;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.ai-report-table th {
+  background: var(--panel-muted);
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ai-report-table td {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.ai-report-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.saved-ai-results {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 14px;
+  margin-top: 8px;
+  padding-top: 20px;
+}
+
+.saved-ai-results h3 {
+  margin: 8px 0 4px;
+}
+
+.saved-ai-layout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 2fr);
+}
+
+.saved-ai-list {
+  align-content: start;
+  display: grid;
+  gap: 8px;
+  max-height: 760px;
+  overflow-y: auto;
+}
+
+.saved-ai-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  text-align: left;
+}
+
+.saved-ai-card:hover,
+.saved-ai-card.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.saved-ai-card span,
+.saved-ai-card em,
+.saved-ai-card small {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.saved-ai-card strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.saved-ai-report {
+  background: var(--panel-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.ai-empty-result.compact {
+  min-height: 120px;
+}
+
+@media (max-width: 900px) {
+  .saved-ai-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-ai-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .saved-ai-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 .source-table-toolbar {
   display: grid;
